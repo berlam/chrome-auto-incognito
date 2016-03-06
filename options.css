@@ -1,0 +1,9 @@
+#tester {
+	height: 50%;
+	border: 0;
+}
+
+.maxWidth {
+	display: block;
+	width: 100%;
+}
