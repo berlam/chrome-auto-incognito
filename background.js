@@ -15,35 +15,32 @@
 		if (!tab.incognito && !match('^(chrome|chromium|chrome-extension):', url)) {
 			chrome.storage.sync.get(null, function(storage) {
 				if (match(storage.regexp, url) !== storage.invert) {
-					processIncognitoRequest(tab, url, function(windows) {
-						searchIncognitoWindow(windows, url, storage.reuse);
+					// Search already open incognito windows and use them.
+					chrome.windows.getAll({populate: false}, function(windows) {
+						openIncognito(windows, url, storage.reuse, function() {
+							// Remove Tab and History entry.
+							chrome.tabs.remove(tab.id);
+							chrome.history.deleteUrl({url: url});
+						});
 					});
 				}
 			});
 		}
 	}
 
-	function processIncognitoRequest(tab, url, callback) {
-		// Remove Tab and History entry.
-		chrome.tabs.remove(tab.id);
-		chrome.history.deleteUrl({url: url});
-		// Search already open incognito windows and use them.
-		chrome.windows.getAll({populate: false}, callback);
-	}
-
-	function searchIncognitoWindow(windows, url, reuse) {
-		var i, window;
+	function openIncognito(windows, url, reuse, callback) {
+		var i, w;
 		if (windows && reuse) {
 			for (i = 0; i < windows.length; ++i) {
-				window = windows[i];
-				if (window.incognito) {
-					chrome.tabs.create({windowId: window.id, url: url});
-					chrome.windows.update(window.id, {focused: true});
+				w = windows[i];
+				if (w.incognito) {
+					chrome.tabs.create({windowId: w.id, url: url});
+					chrome.windows.update(w.id, {focused: true}, callback);
 					return;
 				}
 			}
 		}
-		chrome.windows.create({incognito: true, url: url});
+		chrome.windows.create({incognito: true, url: url}, callback);
 	}
 
 	chrome.tabs.onCreated.addListener(function(tab) {
